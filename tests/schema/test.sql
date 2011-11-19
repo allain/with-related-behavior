@@ -49,3 +49,11 @@ CREATE TABLE `user` (
   `name` varchar(100) NOT NULL,
   PRIMARY KEY (`id`)
 );
+
+DROP TABLE IF EXISTS `profile`;
+
+CREATE TABLE `profile` (
+  `id` int(10) unsigned NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);

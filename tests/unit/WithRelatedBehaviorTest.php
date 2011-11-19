@@ -17,6 +17,7 @@ class WithRelatedBehaviorTest extends CDbTestCase
     private $tag2;
     private $user;
     private $group;
+    private $profile;
 
     public function setUp()
     {
@@ -37,6 +38,9 @@ class WithRelatedBehaviorTest extends CDbTestCase
 
         $this->user = new User;
         $this->user->name = 'User';
+
+        $this->profile = new Profile;
+        $this->profile->email = 'email@testing.com';
 
         $this->group = new Group;
         $this->group->name = 'Group';
@@ -65,9 +69,12 @@ class WithRelatedBehaviorTest extends CDbTestCase
         $this->assertTrue($saved);
     }
 
-    public function testBelongsToRelationIsSaved()
-    {
+    public function testHasOneRelationIsSaved() {
+        $this->user->profile = $this->profile;
+        $saved = $this->user->withRelated->save(true, array('profile'));
 
+        $this->assertTrue($saved);
+        $this->assertNotNull($this->profile->id);
     }
 
     public function testHasManyRelationIsSaved()
