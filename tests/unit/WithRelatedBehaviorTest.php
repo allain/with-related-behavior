@@ -7,6 +7,7 @@ class WithRelatedBehaviorTest extends CDbTestCase
         'groups' => 'Group',
         'tags' => 'Tag',
         'users' => 'User',
+        'profiles' => 'Profile',
         ':article_tag',
     );
 
@@ -48,6 +49,16 @@ class WithRelatedBehaviorTest extends CDbTestCase
         parent::setUp();
     }
 
+    public function testValidationPassesWithEmptyRelations()
+    {
+        $this->article->comments = array();
+        $this->article->tags = array();
+
+        $validates = $this->article->withRelated->validate();
+        
+        $this->assertTrue($validates);
+    }
+
     public function testEmptyHasRelationDoesNotBlockSave()
     {
         $this->article->comments = array();
@@ -69,7 +80,8 @@ class WithRelatedBehaviorTest extends CDbTestCase
         $this->assertTrue($saved);
     }
 
-    public function testHasOneRelationIsSaved() {
+    public function testHasOneRelationIsSaved()
+    {
         $this->user->profile = $this->profile;
         $saved = $this->user->withRelated->save(true, array('profile'));
 
@@ -125,7 +137,8 @@ class WithRelatedBehaviorTest extends CDbTestCase
         $this->assertFalse($saved);
     }
 
-    public function testAppendingExistingRecordsInHasManyBehavesSanely() {
+    public function testAppendingExistingRecordsInHasManyBehavesSanely()
+    {
         $this->article->comments = array($this->comment1);
         $saved = $this->article->withRelated->save(true, array('comments'));
         $this->assertTrue($saved);

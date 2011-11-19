@@ -15,6 +15,7 @@ class User extends CActiveRecord
 	{
 		return array(
 			'group'=>array(self::BELONGS_TO,'Group','group_id'),
+            'profile'=>array(self::HAS_ONE,'Profile','id'),
 		);
 	}
 
@@ -22,6 +23,13 @@ class User extends CActiveRecord
 	{
 		return array(
 			array('name','required'),
+		);
+	}
+
+    public function behaviors()
+	{
+		return array(
+			'withRelated'=>'ext.WithRelatedBehavior',
 		);
 	}
 }
