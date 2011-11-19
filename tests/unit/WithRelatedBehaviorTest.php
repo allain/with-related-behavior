@@ -8,7 +8,7 @@ class WithRelatedBehaviorTest extends CDbTestCase
         'tags' => 'Tag',
         'users' => 'User',
         'profiles' => 'Profile',
-        ':article_tag',
+        'taggings' => 'Tagging',
     );
 
     private $article;
@@ -105,15 +105,28 @@ class WithRelatedBehaviorTest extends CDbTestCase
         $this->assertEquals($this->article->id, $this->comment2->article_id);
     }
 
-    public function testManyToManyRelationIsSaved()
+    public function testHasManyThoughRelationIsSaved()
     {
         $this->article->tags = array($this->tag1, $this->tag2);
 
         $saved = $this->article->withRelated->save(true, array('tags'));
-
-        $this->assertTrue($this->article->withRelated->validate(true, array('tags')));
         $this->assertTrue($saved);
-        $this->assertTrue($this->article->id > 0);
+
+        $taggedTimestamp = $this->article->taggings[0]->tagged;
+        $this->assertNotNull($taggedTimestamp);
+        sleep(2);
+        $this->article->withRelated->save(true, array('tags'));
+
+        $article = Article::model()->find();
+        $this->assertEquals($taggedTimestamp, $article->taggings[0]->tagged);
+    }
+
+    public function testManyToManyRelationsAreNotDeletedUnnecessarily()
+    {
+        $this->article->tags = array($this->tag1, $this->tag2);
+        $saved = $this->article->withRelated->save(true, array('tags'));
+
+        $this->assertNotNull($this->article->id > 0);
         $this->assertTrue($this->tag1->id > 0);
         $this->assertTrue($this->tag2->id > 0);
 

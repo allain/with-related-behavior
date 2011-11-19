@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS `article_tag`;
 CREATE TABLE `article_tag` (
   `article_id` int(10) unsigned NOT NULL,
   `tag_id` int(10) unsigned NOT NULL,
+  `tagged` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`article_id`,`tag_id`)
 );
 
