@@ -10,147 +10,155 @@ class WithRelatedBehaviorTest extends CDbTestCase
         ':article_tag',
     );
 
+    private $article;
+    private $comment1;
+    private $comment2;
+    private $tag1;
+    private $tag2;
+    private $user;
+    private $group;
+
+    public function setUp()
+    {
+        $this->article = new Article;
+        $this->article->title = 'Article';
+
+        $this->comment1 = new Comment;
+        $this->comment1->content = 'Comment 1';
+
+        $this->comment2 = new Comment;
+        $this->comment2->content = 'Comment 2';
+
+        $this->tag1 = new Tag;
+        $this->tag1->name = 'Tag 1';
+        
+        $this->tag2 = new Tag;
+        $this->tag2->name = 'Tag 2';
+
+        $this->user = new User;
+        $this->user->name = 'User';
+
+        $this->group = new Group;
+        $this->group->name = 'Group';
+
+        parent::setUp();
+    }
+
     public function testEmptyHasRelationDoesNotBlockSave()
     {
-        $article = new Article;
-        $article->title = "Test";
-        $article->comments = array();
+        $this->article->comments = array();
 
-        $saved = $article->withRelated->save(true, array('comments'));
+        $saved = $this->article->withRelated->save(true, array('comments'));
         $this->assertTrue($saved, "Article was saved");
     }
 
     public function testEmptyBelongsToRelationDoesNotBlockSave()
     {
-        $article = new Article;
-        $article->title = "Test";
-        $saved = $article->withRelated->save(true, array('user'));
+        $saved = $this->article->withRelated->save(true, array('user'));
         $this->assertTrue($saved);
     }
 
     public function testEmptyManyToManyRelationDoesNotBlockSave()
     {
-        $article = new Article;
-        $article->title = "Test";
-        $article->tags = array();
-        $saved = $article->withRelated->save(true, array('tags'));
+        $this->article->tags = array();
+        $saved = $this->article->withRelated->save(true, array('tags'));
         $this->assertTrue($saved);
     }
 
-    public function testHasOneRelationIsSaved()
+    public function testBelongsToRelationIsSaved()
     {
 
     }
 
     public function testHasManyRelationIsSaved()
     {
-        $comment1 = new Comment;
-        $comment1->content = 'A';
 
-        $comment2 = new Comment;
-        $comment2->content = 'B';
+        $this->article->comments = array($this->comment1, $this->comment2);
 
-        $article = new Article;
-        $article->title = 'Article';
-        $article->comments = array($comment1, $comment2);
-
-        $saved = $article->withRelated->save(true, array('comments'));
+        $saved = $this->article->withRelated->save(true, array('comments'));
         $this->assertTrue($saved);
 
-        $this->assertTrue($article->id > 0);
-        $this->assertTrue($comment1->id > 0);
-        $this->assertTrue($comment2->id > 0);
+        $this->assertTrue($this->article->id > 0);
+        $this->assertTrue($this->comment1->id > 0);
+        $this->assertTrue($this->comment2->id > 0);
 
-        $this->assertEquals($article->id, $comment1->article_id);
-        $this->assertEquals($article->id, $comment2->article_id);
+        $this->assertEquals($this->article->id, $this->comment1->article_id);
+        $this->assertEquals($this->article->id, $this->comment2->article_id);
     }
 
     public function testManyToManyRelationIsSaved()
     {
-        $tag1 = new Tag;
-        $tag1->name = 't1';
-        $tag2 = new Tag;
-        $tag2->name = 't2';
+        $this->article->tags = array($this->tag1, $this->tag2);
 
-        $article = new Article;
-        $article->tags = array($tag1, $tag2);
-        $article->title = 'Article';
+        $saved = $this->article->withRelated->save(true, array('tags'));
 
-        $saved = $article->withRelated->save(true, array('tags'));
-
-        $this->assertTrue($article->withRelated->validate(true, array('tags')));
+        $this->assertTrue($this->article->withRelated->validate(true, array('tags')));
         $this->assertTrue($saved);
-        $this->assertTrue($article->id > 0);
-        $this->assertTrue($tag1->id > 0);
-        $this->assertTrue($tag2->id > 0);
+        $this->assertTrue($this->article->id > 0);
+        $this->assertTrue($this->tag1->id > 0);
+        $this->assertTrue($this->tag2->id > 0);
 
-        $fetchedArticle = Article::model()->findByPk($article->id);
+        $fetchedArticle = Article::model()->findByPk($this->article->id);
         $this->assertEquals(2, count($fetchedArticle->tags));
-        $this->assertEquals('t1', $fetchedArticle->tags[0]->name);
+        $this->assertEquals('Tag 1', $fetchedArticle->tags[0]->name);
+        $this->assertEquals('Tag 2', $fetchedArticle->tags[1]->name);
     }
 
     public function testSavingFailsIfRelatedRecordsFailValidation()
     {
-        $article = new Article;
-        $article->title = "Article";
-        $this->assertTrue($article->validate());
+        $this->assertTrue($this->article->validate());
 
-        $comment = new Comment();
-        $article->comments = array($comment);
+        $invalidComment = new Comment();
+        $this->article->comments = array($invalidComment);
 
-        $validateWithRelated = $article->withRelated->validate(array('comments'));
+        $validateWithRelated = $this->article->withRelated->validate(array('comments'));
         $this->assertFalse($validateWithRelated);
-        $saved = $article->withRelated->save(true, array('comments'));
+
+        $saved = $this->article->withRelated->save(true, array('comments'));
         $this->assertFalse($saved);
+    }
+
+    public function testAppendingExistingRecordsInHasManyBehavesSanely() {
+        $this->article->comments = array($this->comment1);
+        $saved = $this->article->withRelated->save(true, array('comments'));
+        $this->assertTrue($saved);
+
+        $comment1Id = $this->comment1->id;
+
+        $this->article->comments = array($this->comment1, $this->comment2);
+        $saved = $this->article->withRelated->save(true, array('comments'));
+
+        $this->assertTrue($saved);
+        
+        $this->assertEquals(2, count($this->article->comments));
+        $this->assertEquals($comment1Id, $this->comment1->id);
+
+        $this->assertTrue($this->comment2->validate());
+        
+        $this->assertNotNull($this->article->comments[1]);
     }
 
     public function testSave()
     {
-        $article = new Article;
+        $this->user->group = $this->group;
 
-        $user = new User;
+        $this->article->user = $this->user;
 
-        $article->user = $user;
+        // Attach Comments
+        $this->comment1->user = $this->user;
+        $this->comment2->user = $this->user;
+        $this->article->comments = array($this->comment1, $this->comment2);
 
-        $user->group = new Group;
+        // Attach Tags
+        $this->article->tags = array($this->tag1, $this->tag2);
 
-        $comment1 = new Comment;
-        $comment1->user = $user;
-
-        $comment2 = new Comment;
-        $comment2->user = $user;
-
-        $article->comments = array($comment1, $comment2);
-
-        $tag1 = new Tag;
-        $tag2 = new Tag;
-
-        $article->tags = array($tag1, $tag2);
-
-        $result = $article->withRelated->save(true, array(
+        $result = $this->article->withRelated->save(true, array(
                                                          'user' => array('group'),
                                                          'comments' => array('user'),
                                                          'tags',
                                                     ));
-
-        $this->assertFalse($result);
-
-        $article->title = 'article1';
-        $user->name = 'user1';
-        $user->group->name = 'group1';
-        $comment1->content = 'comment1';
-        $comment2->content = 'comment2';
-        $tag1->name = 'tag1';
-        $tag2->name = 'tag2';
-
-        $result = $article->withRelated->save(true, array(
-                                                         'user' => array('group'),
-                                                         'comments' => array('user'),
-                                                         'tags',
-                                                    ));
-
         $this->assertTrue($result);
-
+        
         $article = Article::model()->with(array(
                                                'user' => array(
                                                    'with' => 'group',
@@ -166,66 +174,68 @@ class WithRelatedBehaviorTest extends CDbTestCase
                                                'tags',
                                           ))->find();
 
+
         $this->assertNotNull($article);
-        $this->assertEquals('article1', $article->title);
+        $this->assertEquals('Article', $article->title);
         $this->assertNotNull($article->user);
-        $this->assertEquals('user1', $article->user->name);
+        $this->assertEquals('User', $article->user->name);
         $this->assertNotNull($article->user->group);
-        $this->assertEquals('group1', $article->user->group->name);
+        $this->assertEquals('Group', $article->user->group->name);
         $this->assertEquals(2, count($article->comments));
-        $this->assertEquals('comment1', $article->comments[0]->content);
-        $this->assertEquals('comment2', $article->comments[1]->content);
+        $this->assertEquals('Comment 1', $article->comments[0]->content);
+        $this->assertEquals('Comment 2', $article->comments[1]->content);
         $this->assertNotNull($article->comments[0]->user);
-        $this->assertEquals('user1', $article->comments[0]->user->name);
+        $this->assertEquals('User', $article->comments[0]->user->name);
         $this->assertNotNull($article->comments[1]->user);
-        $this->assertEquals('user1', $article->comments[1]->user->name);
+        $this->assertEquals('User', $article->comments[1]->user->name);
         $this->assertEquals(2, count($article->tags));
-        $this->assertEquals('tag1', $article->tags[0]->name);
-        $this->assertEquals('tag2', $article->tags[1]->name);
+        $this->assertEquals('Tag 1', $article->tags[0]->name);
+        $this->assertEquals('Tag 2', $article->tags[1]->name);
 
         $article = Article::model()->with('comments')->find();
 
         $comments = $article->comments;
-        $comments[0]->content = 'comment1 update';
-        $comments[1]->content = 'comment2 update';
+        $comments[0]->content = 'Comment 1 update';
+        $comments[1]->content = 'Comment 2 update';
 
         $comment = new Comment;
-        $comment->user = $user;
-        $comment->content = 'comment3';
+        $comment->user = $this->user;
+        $comment->content = 'Comment 3';
 
         $comments[] = $comment;
 
         $comment = new Comment;
-        $comment->user = $user;
-        $comment->content = 'comment4';
+        $comment->user = $this->user;
+        $comment->content = 'Comment 4';
 
         $comments[] = $comment;
 
         $article->comments = $comments;
 
         $result = $article->withRelated->save(true, array('comments' => array('user')));
+        
         $this->assertTrue($result);
 
         $article = Article::model()->with('comments')->find();
         $this->assertEquals(4, count($article->comments));
-        $this->assertEquals('comment1 update', $article->comments[0]->content);
-        $this->assertEquals('comment2 update', $article->comments[1]->content);
-        $this->assertEquals('comment3', $article->comments[2]->content);
-        $this->assertEquals('comment4', $article->comments[3]->content);
+        $this->assertEquals('Comment 1 update', $article->comments[0]->content);
+        $this->assertEquals('Comment 2 update', $article->comments[1]->content);
+        $this->assertEquals('Comment 3', $article->comments[2]->content);
+        $this->assertEquals('Comment 4', $article->comments[3]->content);
 
         $article = Article::model()->with('tags')->find();
 
         $tags = $article->tags;
-        $tags[0]->name = 'tag1 update';
-        $tags[1]->name = 'tag2 update';
+        $tags[0]->name = 'Tag 1 update';
+        $tags[1]->name = 'Tag 2 update';
 
         $tag = new Tag;
-        $tag->name = 'tag3';
+        $tag->name = 'Tag 3';
 
         $tags[] = $tag;
 
         $tag = new Tag;
-        $tag->name = 'tag4';
+        $tag->name = 'Tag 4';
 
         $tags[] = $tag;
 
@@ -236,9 +246,9 @@ class WithRelatedBehaviorTest extends CDbTestCase
 
         $article = Article::model()->with('tags')->find();
         $this->assertEquals(4, count($article->tags));
-        $this->assertEquals('tag1 update', $article->tags[0]->name);
-        $this->assertEquals('tag2 update', $article->tags[1]->name);
-        $this->assertEquals('tag3', $article->tags[2]->name);
-        $this->assertEquals('tag4', $article->tags[3]->name);
+        $this->assertEquals('Tag 1 update', $article->tags[0]->name);
+        $this->assertEquals('Tag 2 update', $article->tags[1]->name);
+        $this->assertEquals('Tag 3', $article->tags[2]->name);
+        $this->assertEquals('Tag 4', $article->tags[3]->name);
     }
 }
