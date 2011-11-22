@@ -20,9 +20,9 @@ class Tagging extends CActiveRecord {
 
 	public function relations()
 	{
-		/*return array(
+		return array(
 			'article'=>array(self::HAS_ONE,'Article','article_id'),
             'tag'=>array(self::HAS_ONE,'Tag','tag_id'),
-		);*/
+		);
 	}
 }
